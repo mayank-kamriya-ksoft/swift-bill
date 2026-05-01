@@ -21,51 +21,78 @@ export default function ProductSearch({ onSelect, autoFocus }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [highlight, setHighlight] = useState(0);
+  const [loading, setLoading] = useState(false); // ✅ NEW
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
+  // 🔥 DEBOUNCED SEARCH WITH LOADER
   useEffect(() => {
     const q = query.trim().toLowerCase();
+
     if (!q) {
       setResults([]);
+      setLoading(false);
       return;
     }
+
     let ignore = false;
+
     const timer = window.setTimeout(async () => {
+      setLoading(true); // ✅ start loading
+
       const { data } = await (supabase as any).rpc('search_products', {
         search_term: q,
         page_limit: 8,
         page_offset: 0,
       });
-      if (!ignore) setResults((data || []) as Product[]);
-    }, 180);
+
+      if (!ignore) {
+        setResults((data || []) as Product[]);
+        setLoading(false); // ✅ stop loading
+      }
+    }, 400); // 🔥 better debounce timing
+
     return () => {
       ignore = true;
       window.clearTimeout(timer);
     };
   }, [query]);
 
-  useEffect(() => { setHighlight(0); }, [query]);
+  useEffect(() => {
+    setHighlight(0);
+  }, [query]);
 
   const pick = (p: Product) => {
     onSelect(p);
     setQuery('');
+    setResults([]);
     inputRef.current?.focus();
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!results.length) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(h => Math.min(h + 1, results.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight(h => Math.max(h - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); pick(results[highlight]); }
-    else if (e.key === 'Escape') { setQuery(''); }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlight(h => Math.min(h + 1, results.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight(h => Math.max(h - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      pick(results[highlight]);
+    } else if (e.key === 'Escape') {
+      setQuery('');
+      setResults([]);
+    }
   };
 
   return (
     <div className="relative">
+      {/* INPUT */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -78,7 +105,18 @@ export default function ProductSearch({ onSelect, autoFocus }: Props) {
         />
       </div>
 
-      {results.length > 0 && (
+      {/* 🔄 LOADING STATE */}
+      {loading && (
+        <div className="absolute z-30 left-0 right-0 mt-2 bg-popover border rounded-xl shadow-pop p-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            Searching products...
+          </div>
+        </div>
+      )}
+
+      {/* 📦 RESULTS */}
+      {!loading && results.length > 0 && (
         <div className="absolute z-30 left-0 right-0 mt-2 bg-popover border rounded-xl shadow-pop overflow-hidden">
           {results.map((p, i) => (
             <button
@@ -86,7 +124,9 @@ export default function ProductSearch({ onSelect, autoFocus }: Props) {
               type="button"
               onMouseEnter={() => setHighlight(i)}
               onClick={() => pick(p)}
-              className={`w-full flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors ${i === highlight ? 'bg-secondary' : ''}`}
+              className={`w-full flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors ${
+                i === highlight ? 'bg-secondary' : ''
+              }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -95,13 +135,25 @@ export default function ProductSearch({ onSelect, autoFocus }: Props) {
                 <div className="min-w-0">
                   <div className="font-medium truncate">{p.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    Stock: <span className={p.stock <= 5 ? 'text-warning font-semibold' : ''}>{p.stock} {p.unit}</span>
+                    Stock:{' '}
+                    <span className={p.stock <= 5 ? 'text-warning font-semibold' : ''}>
+                      {p.stock} {p.unit}
+                    </span>
                   </div>
                 </div>
               </div>
-              <div className="font-mono-num font-semibold text-primary shrink-0">{formatINR(p.price)}</div>
+              <div className="font-mono-num font-semibold text-primary shrink-0">
+                {formatINR(p.price)}
+              </div>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ❌ NO RESULTS */}
+      {!loading && query && results.length === 0 && (
+        <div className="absolute z-30 left-0 right-0 mt-2 bg-popover border rounded-xl shadow-pop p-4 text-sm text-muted-foreground">
+          No products found
         </div>
       )}
     </div>
