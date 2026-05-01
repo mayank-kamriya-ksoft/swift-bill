@@ -83,13 +83,33 @@
   .shadow-glow { box-shadow: var(--shadow-glow); }
 }
 
-/* Hide everything except print area when printing */
+/* Print: show only the receipt */
 @media print {
-  body * { visibility: hidden; }
-  #print-area, #print-area * { visibility: visible; }
+  @page { size: A4; margin: 12mm; }
+
+  html, body { background: #fff !important; }
+  body * { visibility: hidden !important; }
+
+  /* Neutralize Radix Dialog overlay & wrappers so they don't paint */
+  [data-radix-popper-content-wrapper],
+  [role="dialog"],
+  [data-state="open"] { background: transparent !important; box-shadow: none !important; }
+
+  #print-area, #print-area * { visibility: visible !important; }
   #print-area {
-    position: absolute; left: 0; top: 0; width: 100%;
-    padding: 24px;
+    position: fixed !important;
+    inset: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    overflow: visible !important;
+    z-index: 999999 !important;
   }
-  .no-print { display: none !important; }
+
+  .no-print, .no-print * { display: none !important; }
 }
