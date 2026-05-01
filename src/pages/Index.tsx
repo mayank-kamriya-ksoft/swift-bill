@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSession, logout } from '@/lib/auth';
 import { Bill, BillItem, formatINR, getBills, loadCartDraft, nextInvoiceNo, saveBill, saveCartDraft, clearCartDraft } from '@/lib/bills';
@@ -229,10 +229,17 @@ export default function Index() {
 }
 
 function RecentBills({ bills, onOpen }: { bills: Bill[]; onOpen: (b: Bill) => void }) {
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(bills.length / PAGE_SIZE));
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const pageBills = useMemo(() => bills.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [bills, page]);
+
   if (!bills.length) {
     return <div className="text-center py-20 text-muted-foreground">No bills in the last 24 hours.</div>;
   }
   return (
+    <div className="space-y-3">
     <div className="bg-card border rounded-2xl shadow-soft overflow-hidden">
       <div className="overflow-x-auto">
       <table className="w-full text-sm min-w-[520px]">
@@ -246,7 +253,7 @@ function RecentBills({ bills, onOpen }: { bills: Bill[]; onOpen: (b: Bill) => vo
           </tr>
         </thead>
         <tbody>
-          {bills.map(b => (
+          {pageBills.map(b => (
             <tr key={b.id} className="border-t hover:bg-secondary/30">
               <td className="py-3 px-4 sm:px-5 font-mono-num font-semibold">{b.invoiceNo}</td>
               <td className="py-3 px-4 sm:px-5 text-muted-foreground whitespace-nowrap">{new Date(b.createdAt).toLocaleString('en-IN')}</td>
@@ -261,5 +268,24 @@ function RecentBills({ bills, onOpen }: { bills: Bill[]; onOpen: (b: Bill) => vo
       </table>
       </div>
     </div>
+    <PagerBar page={page} totalPages={totalPages} total={bills.length} pageSize={PAGE_SIZE} onPage={setPage} />
+    </div>
   );
 }
+
+function PagerBar({ page, totalPages, total, pageSize, onPage }: { page: number; totalPages: number; total: number; pageSize: number; onPage: (p: number) => void }) {
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  return (
+    <div className="flex items-center justify-between gap-2 flex-wrap px-1">
+      <p className="text-xs text-muted-foreground">Showing {from}–{to} of {total}</p>
+      <div className="flex items-center gap-1">
+        <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onPage(page - 1)}>Prev</Button>
+        <span className="text-xs px-2 tabular-nums">Page {page} / {totalPages}</span>
+        <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>Next</Button>
+      </div>
+    </div>
+  );
+}
+
+export { PagerBar };

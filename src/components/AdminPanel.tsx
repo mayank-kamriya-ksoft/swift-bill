@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { adminSupabase } from '@/lib/adminClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,12 @@ export default function AdminPanel() {
   useEffect(() => { load(); }, []);
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => { setPage(1); }, [filter]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   const startNew = () => { setEditing({ id: '', name: '', unit: 'pcs', price: 0, stock: 0 }); setOpen(true); };
   const startEdit = (p: Product) => { setEditing({ ...p }); setOpen(true); };
@@ -79,7 +85,7 @@ export default function AdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(p => (
+            {pageItems.map(p => (
               <tr key={p.id} className="border-t hover:bg-secondary/30">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
@@ -109,6 +115,19 @@ export default function AdminPanel() {
         </table>
         </div>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between gap-2 flex-wrap px-1">
+          <p className="text-xs text-muted-foreground">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>
+            <span className="text-xs px-2 tabular-nums">Page {page} / {totalPages}</span>
+            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
