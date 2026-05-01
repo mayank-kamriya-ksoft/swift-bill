@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bill, formatINR } from '@/lib/bills';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,29 @@ interface Props {
 
 export default function BillReceipt({ bill, onClose }: Props) {
   const [open, setOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   useEffect(() => { setOpen(!!bill); }, [bill]);
   if (!bill) return null;
+
+  const handlePrint = () => {
+    const node = printRef.current;
+    if (!node) return;
+    // Mount a top-level clone so the Radix portal/overlay can't hide it.
+    const host = document.createElement('div');
+    host.id = 'print-mount';
+    host.innerHTML = node.outerHTML;
+    document.body.appendChild(host);
+    document.body.classList.add('printing');
+    const cleanup = () => {
+      document.body.classList.remove('printing');
+      host.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    // Safari / fallback
+    setTimeout(cleanup, 1000);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); setOpen(v); }}>
@@ -27,7 +48,7 @@ export default function BillReceipt({ bill, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div id="print-area" className="px-8 pb-6 pt-2">
+        <div ref={printRef} id="print-area" className="px-8 pb-6 pt-2">
           <div className="border-b-2 border-primary pb-4 mb-4 flex items-end justify-between">
             <div>
               <h2 className="font-display text-3xl font-bold text-primary tracking-tight">SCHIN PAINTS</h2>
@@ -81,7 +102,7 @@ export default function BillReceipt({ bill, onClose }: Props) {
           <Button variant="outline" onClick={() => downloadBillPDF(bill)}>
             <Download className="w-4 h-4 mr-2" /> PDF
           </Button>
-          <Button onClick={() => window.print()} className="bg-gradient-primary">
+          <Button onClick={handlePrint} className="bg-gradient-primary">
             <Printer className="w-4 h-4 mr-2" /> Print
           </Button>
         </div>

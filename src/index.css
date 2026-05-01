@@ -83,33 +83,30 @@
   .shadow-glow { box-shadow: var(--shadow-glow); }
 }
 
-/* Print: show only the receipt */
+/* Print: show only the cloned receipt mounted at #print-mount */
 @media print {
   @page { size: A4; margin: 12mm; }
 
   html, body { background: #fff !important; }
-  body * { visibility: hidden !important; }
 
-  /* Neutralize Radix Dialog overlay & wrappers so they don't paint */
-  [data-radix-popper-content-wrapper],
-  [role="dialog"],
-  [data-state="open"] { background: transparent !important; box-shadow: none !important; }
+  /* When printing, hide everything except our top-level print mount */
+  body.printing > *:not(#print-mount) { display: none !important; }
 
-  #print-area, #print-area * { visibility: visible !important; }
-  #print-area {
-    position: fixed !important;
-    inset: 0 !important;
-    transform: none !important;
+  #print-mount {
+    display: block !important;
+    position: static !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  #print-mount #print-area {
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
     color: #000 !important;
-    overflow: visible !important;
-    z-index: 999999 !important;
   }
-
-  .no-print, .no-print * { display: none !important; }
 }
+
+/* Always hide the print mount on screen */
+#print-mount { display: none; }
