@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSession, logout } from '@/lib/auth';
-import { Bill, BillItem, formatINR, getBills, loadCartDraft, nextInvoiceNo, saveBill, saveCartDraft, clearCartDraft } from '@/lib/bills';
+import { Bill, BillItem, DiscountType, computeDiscountAmount, formatINR, getBills, loadCartDraft, nextInvoiceNo, saveBill, saveCartDraft, clearCartDraft } from '@/lib/bills';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductSearch, { Product } from '@/components/ProductSearch';
 import BillReceipt from '@/components/BillReceipt';
 import AdminPanel from '@/components/AdminPanel';
-import { LogOut, Trash2, Receipt, PaintBucket, ShieldCheck, Clock, Plus, Minus } from 'lucide-react';
+import { LogOut, Trash2, Receipt, PaintBucket, ShieldCheck, Clock, Plus, Minus, Percent, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Index() {
@@ -21,14 +21,16 @@ export default function Index() {
 
   const draft = loadCartDraft();
   const [items, setItems] = useState<BillItem[]>(draft.items);
-  const [discount, setDiscount] = useState<number>(draft.discount);
+  const [discountInput, setDiscountInput] = useState<number>(draft.discountInput);
+  const [discountType, setDiscountType] = useState<DiscountType>(draft.discountType);
   const [recent, setRecent] = useState<Bill[]>(getBills());
   const [activeBill, setActiveBill] = useState<Bill | null>(null);
 
   // Persist cart draft
-  useEffect(() => { saveCartDraft(items, discount); }, [items, discount]);
+  useEffect(() => { saveCartDraft(items, discountInput, discountType); }, [items, discountInput, discountType]);
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
+  const discount = computeDiscountAmount(subtotal, discountType, discountInput);
   const total = Math.max(0, subtotal - discount);
 
   const addProduct = (p: Product) => {
@@ -42,6 +44,10 @@ export default function Index() {
     if (qty <= 0) return setItems(prev => prev.filter(it => it.productId !== id));
     setItems(prev => prev.map(it => it.productId === id ? { ...it, qty } : it));
   };
+  const setPrice = (id: string, price: number) => {
+    const safe = Math.max(0, price || 0);
+    setItems(prev => prev.map(it => it.productId === id ? { ...it, price: safe } : it));
+  };
   const remove = (id: string) => setItems(prev => prev.filter(it => it.productId !== id));
 
   const generateBill = () => {
@@ -54,11 +60,13 @@ export default function Index() {
       items,
       subtotal,
       discount,
+      discountType,
+      discountInput,
       total,
     };
     saveBill(bill);
     setActiveBill(bill);
-    setItems([]); setDiscount(0); clearCartDraft();
+    setItems([]); setDiscountInput(0); setDiscountType('amount'); clearCartDraft();
     setRecent(getBills());
     toast.success('Bill generated · ' + bill.invoiceNo);
   };
@@ -150,7 +158,14 @@ export default function Index() {
                                 <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setQty(it.productId, it.qty + 1)}><Plus className="w-3 h-3" /></Button>
                               </div>
                             </td>
-                            <td className="py-3 text-right font-mono-num">{formatINR(it.price)}</td>
+                            <td className="py-3 text-right">
+                              <Input
+                                type="number" min={0} step="0.01"
+                                value={it.price}
+                                onChange={e => setPrice(it.productId, parseFloat(e.target.value) || 0)}
+                                className="h-7 w-20 text-right font-mono-num px-2 ml-auto"
+                              />
+                            </td>
                             <td className="py-3 text-right pr-5 font-mono-num font-semibold">{formatINR(it.price * it.qty)}</td>
                             <td className="py-3 pr-3">
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(it.productId)}>
@@ -177,14 +192,45 @@ export default function Index() {
                       <span className="font-mono-num">{formatINR(subtotal)}</span>
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground">Discount (₹)</label>
-                      <Input
-                        type="number" min={0} step="0.01"
-                        value={discount || ''}
-                        onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="font-mono-num mt-1"
-                        placeholder="0.00"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-muted-foreground">Discount</label>
+                        <div className="inline-flex rounded-md border overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setDiscountType('amount')}
+                            className={`px-2 py-0.5 text-xs flex items-center gap-1 ${discountType === 'amount' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'}`}
+                            aria-pressed={discountType === 'amount'}
+                          >
+                            <IndianRupee className="w-3 h-3" /> ₹
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDiscountType('percent')}
+                            className={`px-2 py-0.5 text-xs flex items-center gap-1 border-l ${discountType === 'percent' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'}`}
+                            aria-pressed={discountType === 'percent'}
+                          >
+                            <Percent className="w-3 h-3" /> %
+                          </button>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type="number" min={0} step="0.01"
+                          max={discountType === 'percent' ? 100 : undefined}
+                          value={discountInput || ''}
+                          onChange={e => setDiscountInput(Math.max(0, parseFloat(e.target.value) || 0))}
+                          className="font-mono-num pr-8"
+                          placeholder={discountType === 'percent' ? '0' : '0.00'}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                          {discountType === 'percent' ? '%' : '₹'}
+                        </span>
+                      </div>
+                      {discountType === 'percent' && discountInput > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1 text-right">
+                          = <span className="font-mono-num">{formatINR(discount)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -197,7 +243,7 @@ export default function Index() {
                     <Receipt className="w-4 h-4 mr-2" /> Generate Bill
                   </Button>
                   {items.length > 0 && (
-                    <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => { setItems([]); setDiscount(0); clearCartDraft(); }}>
+                    <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => { setItems([]); setDiscountInput(0); setDiscountType('amount'); clearCartDraft(); }}>
                       Clear cart
                     </Button>
                   )}

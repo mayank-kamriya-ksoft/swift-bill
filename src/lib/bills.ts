@@ -8,14 +8,23 @@ export interface BillItem {
   price: number;
   qty: number;
 }
+export type DiscountType = 'amount' | 'percent';
 export interface Bill {
   id: string;
   invoiceNo: string;
   createdAt: number; // ms epoch
   items: BillItem[];
   subtotal: number;
-  discount: number;
+  discount: number;        // resolved ₹ value applied
+  discountType: DiscountType;
+  discountInput: number;   // raw input (₹ or %)
   total: number;
+}
+
+export function computeDiscountAmount(subtotal: number, type: DiscountType, input: number): number {
+  const v = Math.max(0, input || 0);
+  if (type === 'percent') return Math.min(subtotal, +(subtotal * Math.min(v, 100) / 100).toFixed(2));
+  return Math.min(subtotal, +v.toFixed(2));
 }
 
 const BILLS_KEY = 'schin.bills';
@@ -66,15 +75,20 @@ export function nextInvoiceNo(): string {
 }
 
 // Cart draft persistence (also wiped on logout)
-export function saveCartDraft(items: BillItem[], discount: number) {
-  localStorage.setItem(CART_KEY, JSON.stringify({ items, discount }));
+export function saveCartDraft(items: BillItem[], discountInput: number, discountType: DiscountType) {
+  localStorage.setItem(CART_KEY, JSON.stringify({ items, discountInput, discountType }));
 }
-export function loadCartDraft(): { items: BillItem[]; discount: number } {
+export function loadCartDraft(): { items: BillItem[]; discountInput: number; discountType: DiscountType } {
   try {
     const raw = localStorage.getItem(CART_KEY);
-    if (!raw) return { items: [], discount: 0 };
-    return JSON.parse(raw);
-  } catch { return { items: [], discount: 0 }; }
+    if (!raw) return { items: [], discountInput: 0, discountType: 'amount' };
+    const parsed = JSON.parse(raw);
+    return {
+      items: parsed.items ?? [],
+      discountInput: parsed.discountInput ?? parsed.discount ?? 0,
+      discountType: parsed.discountType ?? 'amount',
+    };
+  } catch { return { items: [], discountInput: 0, discountType: 'amount' }; }
 }
 export function clearCartDraft() { localStorage.removeItem(CART_KEY); }
 

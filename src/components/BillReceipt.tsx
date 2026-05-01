@@ -86,7 +86,7 @@ export default function BillReceipt({ bill, onClose }: Props) {
 
           <div className="mt-4 ml-auto w-72 space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono-num">{formatINR(bill.subtotal)}</span></div>
-            <div className="flex justify-between"><span className="text-warning">Discount</span><span className="font-mono-num text-warning">- {formatINR(bill.discount)}</span></div>
+            <div className="flex justify-between"><span className="text-warning">Discount{bill.discountType === 'percent' ? ` (${bill.discountInput}%)` : ''}</span><span className="font-mono-num text-warning">- {formatINR(bill.discount)}</span></div>
             <div className="flex justify-between border-t-2 border-foreground pt-2 mt-2">
               <span className="font-display font-bold text-lg">TOTAL</span>
               <span className="font-mono-num font-bold text-lg text-primary">{formatINR(bill.total)}</span>

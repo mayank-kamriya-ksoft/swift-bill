@@ -62,7 +62,8 @@ export function downloadBillPDF(bill: Bill) {
   doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
   doc.text('Subtotal', labelX, y); doc.text(formatINR(bill.subtotal), valX, y, { align: 'right' }); y += 16;
   doc.setTextColor(160, 80, 0);
-  doc.text('Discount', labelX, y); doc.text('- ' + formatINR(bill.discount), valX, y, { align: 'right' }); y += 18;
+  const discLabel = bill.discountType === 'percent' ? `Discount (${bill.discountInput}%)` : 'Discount';
+  doc.text(discLabel, labelX, y); doc.text('- ' + formatINR(bill.discount), valX, y, { align: 'right' }); y += 18;
   doc.setTextColor(20, 20, 28);
 
   doc.setDrawColor(20); doc.line(labelX - 10, y - 8, valX + 4, y - 8);
