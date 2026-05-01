@@ -56,19 +56,20 @@ export default function AdminPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4 flex-wrap">
         <div>
-          <h2 className="font-display text-2xl font-bold">Inventory</h2>
-          <p className="text-sm text-muted-foreground">{products.length} products · {products.filter(p => p.stock <= 5).length} low stock</p>
+          <h2 className="font-display text-xl sm:text-2xl font-bold">Inventory</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">{products.length} products · {products.filter(p => p.stock <= 5).length} low stock</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter…" className="w-56" />
-          <Button onClick={startNew} className="bg-gradient-primary"><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter…" className="flex-1 sm:flex-none sm:w-56" />
+          <Button onClick={startNew} className="bg-gradient-primary shrink-0"><Plus className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Add Product</span></Button>
         </div>
       </div>
 
       <div className="bg-card border rounded-xl shadow-soft overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[480px]">
           <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left py-3 px-4">Product</th>
@@ -82,20 +83,20 @@ export default function AdminPanel() {
               <tr key={p.id} className="border-t hover:bg-secondary/30">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Package className="w-4 h-4" /></div>
-                    <div>
-                      <div className="font-medium">{p.name}</div>
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"><Package className="w-4 h-4" /></div>
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{p.name}</div>
                       <div className="text-xs text-muted-foreground">per {p.unit}</div>
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-right font-mono-num">{formatINR(p.price)}</td>
+                <td className="py-3 px-4 text-right font-mono-num whitespace-nowrap">{formatINR(p.price)}</td>
                 <td className="py-3 px-4 text-right font-mono-num">
                   {p.stock <= 5 ? (
                     <span className="inline-flex items-center gap-1 text-warning font-semibold"><AlertTriangle className="w-3 h-3" />{p.stock}</span>
                   ) : p.stock}
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="py-3 px-4 text-right whitespace-nowrap">
                   <Button size="icon" variant="ghost" onClick={() => startEdit(p)}><Pencil className="w-4 h-4" /></Button>
                   <Button size="icon" variant="ghost" onClick={() => remove(p)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </td>
@@ -106,6 +107,7 @@ export default function AdminPanel() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

@@ -73,43 +73,43 @@ export default function Index() {
     <div className="min-h-screen bg-gradient-surface">
       {/* Top bar */}
       <header className="no-print border-b bg-card/80 backdrop-blur sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center shrink-0">
               <PaintBucket className="w-5 h-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="font-display text-xl font-bold leading-none">Schin Paints</h1>
+            <div className="min-w-0">
+              <h1 className="font-display text-base sm:text-xl font-bold leading-none truncate">Schin Paints</h1>
               <p className="text-xs text-muted-foreground">CSN, MH</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${session.role === 'admin' ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-medium ${session.role === 'admin' ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
               <ShieldCheck className="w-3 h-3" /> {session.role.toUpperCase()}
             </span>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-1" /> Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="px-2 sm:px-3">
+              <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         <Tabs defaultValue="billing">
-          <TabsList className="no-print mb-6">
-            <TabsTrigger value="billing"><Receipt className="w-4 h-4 mr-2" /> Billing</TabsTrigger>
-            <TabsTrigger value="recent"><Clock className="w-4 h-4 mr-2" /> Recent (24h)</TabsTrigger>
-            {session.role === 'admin' && <TabsTrigger value="admin"><ShieldCheck className="w-4 h-4 mr-2" /> Admin</TabsTrigger>}
+          <TabsList className="no-print mb-4 sm:mb-6 w-full sm:w-auto overflow-x-auto flex justify-start">
+            <TabsTrigger value="billing"><Receipt className="w-4 h-4 mr-1.5 sm:mr-2" /> <span className="text-xs sm:text-sm">Billing</span></TabsTrigger>
+            <TabsTrigger value="recent"><Clock className="w-4 h-4 mr-1.5 sm:mr-2" /> <span className="text-xs sm:text-sm">Recent (24h)</span></TabsTrigger>
+            {session.role === 'admin' && <TabsTrigger value="admin"><ShieldCheck className="w-4 h-4 mr-1.5 sm:mr-2" /> <span className="text-xs sm:text-sm">Admin</span></TabsTrigger>}
           </TabsList>
 
           <TabsContent value="billing">
-            <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+            <div className="grid lg:grid-cols-[1fr_380px] gap-4 sm:gap-6">
               {/* LEFT: search + cart */}
-              <section className="space-y-4">
+              <section className="space-y-4 min-w-0">
                 <ProductSearch onSelect={addProduct} autoFocus />
 
                 <div className="bg-card border rounded-2xl shadow-soft overflow-hidden">
-                  <div className="px-5 py-3 border-b bg-secondary/40 flex items-center justify-between">
+                  <div className="px-4 sm:px-5 py-3 border-b bg-secondary/40 flex items-center justify-between">
                     <h2 className="font-semibold">Current Bill</h2>
                     <span className="text-sm text-muted-foreground">{items.length} item{items.length !== 1 && 's'}</span>
                   </div>
@@ -120,7 +120,8 @@ export default function Index() {
                       <p className="text-sm">Search and add products to start billing</p>
                     </div>
                   ) : (
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[480px]">
                       <thead>
                         <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b">
                           <th className="text-left py-2 px-5">Item</th>
@@ -160,6 +161,7 @@ export default function Index() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               </section>
@@ -232,30 +234,32 @@ function RecentBills({ bills, onOpen }: { bills: Bill[]; onOpen: (b: Bill) => vo
   }
   return (
     <div className="bg-card border rounded-2xl shadow-soft overflow-hidden">
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[520px]">
         <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="text-left py-3 px-5">Invoice</th>
-            <th className="text-left py-3 px-5">Time</th>
-            <th className="text-right py-3 px-5">Items</th>
-            <th className="text-right py-3 px-5">Total</th>
-            <th className="py-3 px-5 w-20"></th>
+            <th className="text-left py-3 px-4 sm:px-5">Invoice</th>
+            <th className="text-left py-3 px-4 sm:px-5">Time</th>
+            <th className="text-right py-3 px-4 sm:px-5">Items</th>
+            <th className="text-right py-3 px-4 sm:px-5">Total</th>
+            <th className="py-3 px-4 sm:px-5 w-20"></th>
           </tr>
         </thead>
         <tbody>
           {bills.map(b => (
             <tr key={b.id} className="border-t hover:bg-secondary/30">
-              <td className="py-3 px-5 font-mono-num font-semibold">{b.invoiceNo}</td>
-              <td className="py-3 px-5 text-muted-foreground">{new Date(b.createdAt).toLocaleString('en-IN')}</td>
-              <td className="py-3 px-5 text-right font-mono-num">{b.items.length}</td>
-              <td className="py-3 px-5 text-right font-mono-num font-semibold text-primary">{formatINR(b.total)}</td>
-              <td className="py-3 px-5 text-right">
+              <td className="py-3 px-4 sm:px-5 font-mono-num font-semibold">{b.invoiceNo}</td>
+              <td className="py-3 px-4 sm:px-5 text-muted-foreground whitespace-nowrap">{new Date(b.createdAt).toLocaleString('en-IN')}</td>
+              <td className="py-3 px-4 sm:px-5 text-right font-mono-num">{b.items.length}</td>
+              <td className="py-3 px-4 sm:px-5 text-right font-mono-num font-semibold text-primary">{formatINR(b.total)}</td>
+              <td className="py-3 px-4 sm:px-5 text-right">
                 <Button size="sm" variant="outline" onClick={() => onOpen(b)}>View</Button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
