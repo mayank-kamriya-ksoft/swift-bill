@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { adminSupabase } from '@/lib/adminClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,21 +14,41 @@ export default function AdminPanel() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('');
-
-  const load = async () => {
-    const { data, error } = await adminSupabase.from('products').select('*').order('name');
-    if (error) toast.error(error.message);
-    else setProducts((data || []) as Product[]);
-  };
-  useEffect(() => { load(); }, []);
-
-  const filtered = products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({ totalProducts: 0, lowStockCount: 0 });
+  const [debouncedFilter, setDebouncedFilter] = useState('');
+
+  const load = async () => {
+    const searchTerm = debouncedFilter.trim();
+    const offset = (page - 1) * PAGE_SIZE;
+    const [productsResult, countResult, statsResult] = await Promise.all([
+      (adminSupabase as any).rpc('search_products', { search_term: searchTerm, page_limit: PAGE_SIZE, page_offset: offset }),
+      (adminSupabase as any).rpc('count_products', { search_term: searchTerm }),
+      (adminSupabase as any).rpc('get_product_stats'),
+    ]);
+    const { data, error } = productsResult;
+    if (error) toast.error(error.message);
+    else setProducts((data || []) as Product[]);
+    if (countResult.error) toast.error(countResult.error.message);
+    else setTotal(Number(countResult.data || 0));
+    if (!statsResult.error && statsResult.data?.[0]) {
+      setStats({
+        totalProducts: Number(statsResult.data[0].total_products || 0),
+        lowStockCount: Number(statsResult.data[0].low_stock_count || 0),
+      });
+    }
+  };
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedFilter(filter), 180);
+    return () => window.clearTimeout(timer);
+  }, [filter]);
+  useEffect(() => { load(); }, [page, debouncedFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   useEffect(() => { setPage(1); }, [filter]);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-  const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   const startNew = () => { setEditing({ id: '', name: '', unit: 'pcs', price: 0, stock: 0 }); setOpen(true); };
   const startEdit = (p: Product) => { setEditing({ ...p }); setOpen(true); };
@@ -65,7 +85,7 @@ export default function AdminPanel() {
       <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4 flex-wrap">
         <div>
           <h2 className="font-display text-xl sm:text-2xl font-bold">Inventory</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">{products.length} products · {products.filter(p => p.stock <= 5).length} low stock</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">{stats.totalProducts} products · {stats.lowStockCount} low stock</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter…" className="flex-1 sm:flex-none sm:w-56" />
@@ -85,7 +105,7 @@ export default function AdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {pageItems.map(p => (
+            {products.map(p => (
               <tr key={p.id} className="border-t hover:bg-secondary/30">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
@@ -108,7 +128,7 @@ export default function AdminPanel() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {products.length === 0 && (
               <tr><td colSpan={4} className="text-center py-12 text-muted-foreground">No products</td></tr>
             )}
           </tbody>
@@ -116,10 +136,10 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {filtered.length > 0 && (
+      {total > 0 && (
         <div className="flex items-center justify-between gap-2 flex-wrap px-1">
           <p className="text-xs text-muted-foreground">
-            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
           </p>
           <div className="flex items-center gap-1">
             <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>

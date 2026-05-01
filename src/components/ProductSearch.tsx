@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Search, Package } from 'lucide-react';
@@ -19,24 +19,34 @@ interface Props {
 
 export default function ProductSearch({ onSelect, autoFocus }: Props) {
   const [query, setQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [results, setResults] = useState<Product[]>([]);
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.from('products').select('id, name, unit, price, stock').order('name').then(({ data }) => {
-      if (data) setProducts(data as Product[]);
-    });
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
-  const results = useMemo(() => {
+  useEffect(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return products
-      .filter(p => p.name.toLowerCase().includes(q))
-      .slice(0, 8);
-  }, [query, products]);
+    if (!q) {
+      setResults([]);
+      return;
+    }
+    let ignore = false;
+    const timer = window.setTimeout(async () => {
+      const { data } = await (supabase as any).rpc('search_products', {
+        search_term: q,
+        page_limit: 8,
+        page_offset: 0,
+      });
+      if (!ignore) setResults((data || []) as Product[]);
+    }, 180);
+    return () => {
+      ignore = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => { setHighlight(0); }, [query]);
 
